@@ -11,7 +11,7 @@ use log::{error, info};
 use structopt::StructOpt;
 
 #[derive(StructOpt)]
-#[structopt(name = "merge_image")]
+#[structopt(name = "separating_image")]
 struct Opt {
     #[structopt()]
     cmd: String,
