@@ -11,5 +11,5 @@ separating_image.exe ./test/image.bin --output ./custom_output
 ```
 
 ```
-separating_image.exe ./test/image.bin --output ./custom_output --keep_raw_binary
+separating_image.exe ./test/image.bin --output ./custom_output --keep_raw_bin
 ```
