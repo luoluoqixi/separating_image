@@ -1,0 +1,13 @@
+[package]
+name = "separating_image"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+image = "0.25"
+libc = "0.2"
+log = "0.4"
+structopt = "0.3"
+fern = "0.6"
+chrono = "0.4"
+lazy_static = "1.4"
