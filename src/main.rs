@@ -1,7 +1,11 @@
 mod config;
 mod utils;
 
-use std::{fs, io::Read, path::PathBuf};
+use std::{
+    fs,
+    io::{Read, Write},
+    path::PathBuf,
+};
 
 use log::{error, info};
 use structopt::StructOpt;
@@ -13,6 +17,8 @@ struct Opt {
     cmd: String,
     #[structopt(long = "output")]
     output: Option<String>,
+    #[structopt(long = "keep_raw_bin")]
+    keep_raw_binary: Option<Option<bool>>,
 }
 
 fn find_png_images(data: &[u8]) -> Vec<&[u8]> {
@@ -96,26 +102,62 @@ fn find_gif_images(data: &[u8]) -> Vec<&[u8]> {
     images
 }
 
-fn save_images(prefix: &str, images: &Vec<&[u8]>, output_path: &PathBuf) {
+fn save_images(prefix: &str, images: &Vec<&[u8]>, output_path: &PathBuf, keep_raw_binary: bool) {
     info!("{}: {} 个", prefix, images.len());
     for (i, img_data) in images.iter().enumerate() {
-        match image::load_from_memory(img_data) {
-            Ok(img) => {
-                let output_image_path =
-                    output_path.join(format!("{}_image_{}.{}", prefix, i, prefix));
-                img.save(&output_image_path).expect("保存图片失败");
+        let img_name = format!("{}_image_{}.{}", prefix, i, prefix);
+        let output_image_path = output_path.join(&img_name);
+        if keep_raw_binary {
+            let file = fs::File::create(&output_image_path);
+            match file {
+                Ok(mut f) => {
+                    match f.write_all(img_data) {
+                        Ok(_) => {
+                            info!("{}", format!("{}", &img_name));
+                        }
+                        Err(e) => {
+                            error!("{}", format!("写入图片 {} 失败: {:?}", &img_name, e));
+                        }
+                    };
+                }
+                Err(e) => {
+                    error!("{}", format!("创建图片 {} 失败: {:?}", &img_name, e));
+                }
             }
-            Err(e) => {
-                error!(
-                    "{}",
-                    format!("加载 {} Image失败: {:?}, 在索引 {}", prefix, e, i)
-                );
+        } else {
+            match image::load_from_memory(img_data) {
+                Ok(img) => {
+                    match img.save(&output_image_path) {
+                        Ok(_) => {
+                            info!("{}", format!("{}", &img_name));
+                        }
+                        Err(e) => {
+                            error!("{}", format!("保存图片 {} 失败: {:?}", &img_name, e));
+                        }
+                    }
+                    img.save(&output_image_path).expect("保存图片失败");
+                }
+                Err(e) => {
+                    error!("{}", format!("加载图片 {} 失败: {:?}", &img_name, e));
+                }
             }
         }
     }
 }
 
-fn separating_image(input_path: &PathBuf, output_path: &PathBuf) {
+fn get_bool_opt(arg: Option<Option<bool>>) -> bool {
+    if let Some(opt) = arg {
+        if let Some(ret) = opt {
+            ret
+        } else {
+            true
+        }
+    } else {
+        false
+    }
+}
+
+fn separating_image(input_path: &PathBuf, output_path: &PathBuf, keep_raw_binary: bool) -> usize {
     if !output_path.exists() {
         fs::create_dir_all(output_path)
             .expect(format!("创建输出文件夹失败: {}", output_path.display()).as_str());
@@ -126,14 +168,21 @@ fn separating_image(input_path: &PathBuf, output_path: &PathBuf) {
     file.read_to_end(&mut buffer)
         .expect(format!("读取文件失败: {}", input_path.display()).as_str());
 
+    let mut count: usize = 0;
+
     let images = find_png_images(&buffer);
-    save_images("png", &images, output_path);
+    count += images.len();
+    save_images("png", &images, output_path, keep_raw_binary);
 
     let images = find_jpg_images(&buffer);
-    save_images("jpg", &images, output_path);
+    count += images.len();
+    save_images("jpg", &images, output_path, keep_raw_binary);
 
     let images = find_gif_images(&buffer);
-    save_images("gif", &images, output_path);
+    count += images.len();
+    save_images("gif", &images, output_path, keep_raw_binary);
+
+    count
 }
 
 fn _main() {
@@ -142,6 +191,7 @@ fn _main() {
         Opt {
             cmd: "./test/image.bin".to_string(),
             output: None,
+            keep_raw_binary: Some(Some(true)),
         }
     } else {
         Opt::from_args()
@@ -152,9 +202,10 @@ fn _main() {
         opt.output
             .unwrap_or(String::from(current_path.join("output").to_str().unwrap())),
     );
-    separating_image(&input_path, &output_path);
+    let keep_raw_binary = get_bool_opt(opt.keep_raw_binary);
+    let count = separating_image(&input_path, &output_path, keep_raw_binary);
     info!("输出文件夹: {}", output_path.display());
-    info!("全部完成!");
+    info!("全部完成! 总数: {}", count);
 }
 
 fn main() {
