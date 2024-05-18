@@ -14,5 +14,5 @@ separating_image.exe ./test/image.bin --output ./custom_output
 
 ```
 # 合并文件夹的文件到一个二进制
-separating_image.exe --merge ./test/images_dir --output ./image.bin
+separating_image.exe ./test/images_dir --output ./image.bin --merge
 ```
