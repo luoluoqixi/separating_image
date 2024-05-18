@@ -13,6 +13,6 @@ separating_image.exe ./test/image.bin --output ./custom_output
 ```
 
 ```
-# 保留原始二进制图片数据，而不是重新保存图片数据
-separating_image.exe ./test/image.bin --output ./custom_output --keep_raw_bin
+# 合并文件夹的文件到一个二进制
+separating_image.exe ./test/images_dir --output ./image.bin
 ```
